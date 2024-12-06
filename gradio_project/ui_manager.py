@@ -8,7 +8,7 @@ class UIManager:
         <style>
         .container { 
             margin: 15px; 
-            padding-bottom: 160px;
+            padding-bottom: 20px; 
             position: relative;
         }
         .title { 
@@ -16,9 +16,9 @@ class UIManager:
             margin-bottom: 20px; 
         }
         .chatbot { 
-            height: auto !important;  /* 높이를 자동으로 설정 */
-            overflow-y: visible !important;  /* 스크롤바를 숨김 */
-            margin-bottom: 160px !important;
+            height: auto !important;
+            overflow-y: visible !important;
+            margin-bottom: 20px !important;
         }
         .chatbot > div {
             height: auto !important;
@@ -28,57 +28,37 @@ class UIManager:
             overflow-y: visible !important;
             max-height: none !important;
         }
-        .footer { 
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: white;
-            padding: 0px;
-            border-top: 1px solid #ddd;
-            z-index: 1000;
-            margin: 0;
-        }
+        
         .page-controls { 
             display: flex; 
             justify-content: center; 
             align-items: center; 
             gap: 10px;
-            margin-bottom: 5px;
+            margin: 20px 0;
+            padding: 15px;
+            border-top: 1px solid #ddd;
         }
+        
         .page-controls button {
             min-width: 40px !important;
             height: 40px !important;
             padding: 0 !important;
         }
-        .choice-buttons {
-            position: fixed;
-            bottom: 70px;  
-            left: 0;
-            right: 0;
-            background-color: white;
-            padding: 15px;
-            z-index: 1000;
-            margin: 0;
-            border-top: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
+        
         .model-buttons {
             display: flex;
-            gap: 10px;
             justify-content: center;
-            width: 100%;
+            gap: 10px;
+            margin: 10px 0;
         }
-        .model-buttons button,
-        .neutral-button,
-        .cancel-button {
-            width: 150px !important;
-            height: 45px !important;
-            margin: 0 !important;
+        
+        .tool-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
         }
+        
         .statistics { 
             margin-top: 10px; 
             padding: 10px; 
@@ -86,6 +66,7 @@ class UIManager:
             border-radius: 8px; 
             font-size: 0.9em; 
         }
+        
         </style>
         """
         self.js = """
@@ -103,26 +84,33 @@ class UIManager:
             with gr.Column(elem_classes="container"):
                 gr.Markdown("## 대화 비교 평가", elem_classes="title")
                 
-                with gr.Column(elem_classes="statistics"):
-                    statistics = gr.Markdown("")
-                
                 with gr.Row():
                     outputs1 = gr.Chatbot(label="모델 A의 응답", elem_classes="chatbot")
                     outputs2 = gr.Chatbot(label="모델 B의 응답", elem_classes="chatbot")
                 
-                with gr.Column(elem_classes="choice-buttons"):
-                    with gr.Row(elem_classes="model-buttons"):
-                        left_button = gr.Button("모델 A의 응답", variant="primary", scale=1, elem_id="left_btn")
-                        neutral_button = gr.Button("중립", variant="primary", scale=1, elem_id="neutral_btn")
-                        right_button = gr.Button("모델 B의 응답", variant="primary", scale=1, elem_id="right_btn")
-                    cancel_button = gr.Button("선택 취소", variant="primary", scale=1)
+                with gr.Column():
+                    gr.Markdown("### 툴 평가")
+                    with gr.Row(elem_classes="tool-buttons"):
+                        model1_up = gr.Button("모델 A 툴 good")
+                        model1_down = gr.Button("모델 A 툴 bad")
+                        model2_up = gr.Button("모델 B 툴 good")
+                        model2_down = gr.Button("모델 B 툴 bad")
                 
-                with gr.Column(elem_classes="footer"):
+                    with gr.Row(elem_classes="model-buttons"):
+                        left_button = gr.Button("모델 A의 응답", variant="primary")
+                        neutral_button = gr.Button("중립", variant="primary")
+                        right_button = gr.Button("모델 B의 응답", variant="primary")
+                    cancel_button = gr.Button("선택 취소", variant="primary")
+                
+                # 통계를 페이지 컨트롤 바로 위로 이동
+                with gr.Column(elem_classes="statistics"):
+                    statistics = gr.Markdown("")
+                
+                with gr.Column():
                     with gr.Row(elem_classes="page-controls"):
-                        prev_button = gr.Button("◀", scale=1)
+                        prev_button = gr.Button("◀")
                         current_page = gr.Markdown("현재 페이지: 1 / " + str(len(self.data_processor.df)))
-                        next_button = gr.Button("▶", scale=1)
-                        # 슬라이더를 같은 행에 배치
+                        next_button = gr.Button("▶")
                         slider = gr.Slider(
                             minimum=0,
                             maximum=len(self.data_processor.df)-1,
@@ -132,7 +120,7 @@ class UIManager:
                             visible=True
                         )
                         page_index = gr.State(0)
-            
+                
             # 초기 페이지 로드
             initial_outputs1, initial_outputs2, initial_page = self.event_handler.load_initial_page()
             outputs1.value = initial_outputs1
@@ -144,31 +132,28 @@ class UIManager:
                 fn=self.event_handler.update_page,
                 inputs=[slider],
                 outputs=[outputs1, outputs2, page_index, current_page, 
-                        left_button, right_button, neutral_button, cancel_button]
+                        left_button, right_button, neutral_button, cancel_button],
             )
             
             left_button.click(
                 fn=self.event_handler.update_selection,
                 inputs=[page_index, gr.State("left"), slider],
                 outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics],
-                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
+                        left_button, right_button, neutral_button, cancel_button, slider, statistics]
             )
 
             right_button.click(
                 fn=self.event_handler.update_selection,
                 inputs=[page_index, gr.State("right"), slider],
                 outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics],
-                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
+                        left_button, right_button, neutral_button, cancel_button, slider, statistics]
             )
 
             neutral_button.click(
                 fn=self.event_handler.update_selection,
                 inputs=[page_index, gr.State("neutral"), slider],
                 outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics],
-                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
+                        left_button, right_button, neutral_button, cancel_button, slider, statistics]
             )
                 
             cancel_button.click(
@@ -182,14 +167,41 @@ class UIManager:
                 fn=self.event_handler.move_page,
                 inputs=[page_index, gr.State(-1)],
                 outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider]
+                        left_button, right_button, neutral_button, cancel_button, slider],
+                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
             )
             
             next_button.click(
                 fn=self.event_handler.move_page,
                 inputs=[page_index, gr.State(1)],
                 outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider]
+                        left_button, right_button, neutral_button, cancel_button, slider],
+                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
+            )
+
+            # 툴 평가 이벤트 핸들러 연결
+            model1_up.click(
+                fn=self.event_handler.update_tool_vote,
+                inputs=[page_index, gr.State(1), gr.State("up")],
+                outputs=[model1_up, model1_down, model2_up, model2_down, statistics]
+            )
+            
+            model1_down.click(
+                fn=self.event_handler.update_tool_vote,
+                inputs=[page_index, gr.State(1), gr.State("down")],
+                outputs=[model1_up, model1_down, model2_up, model2_down, statistics]
+            )
+            
+            model2_up.click(
+                fn=self.event_handler.update_tool_vote,
+                inputs=[page_index, gr.State(2), gr.State("up")],
+                outputs=[model1_up, model1_down, model2_up, model2_down, statistics]
+            )
+            
+            model2_down.click(
+                fn=self.event_handler.update_tool_vote,
+                inputs=[page_index, gr.State(2), gr.State("down")],
+                outputs=[model1_up, model1_down, model2_up, model2_down, statistics]
             )
 
         return iface
