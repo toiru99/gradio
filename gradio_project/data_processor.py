@@ -7,9 +7,10 @@ class DataProcessor:
         self.csv_path = csv_path
         self.port = port
         self.df = pd.read_csv(csv_path)
-        self.df['left'] = 0
-        self.df['right'] = 0
-        self.df['neutral'] = 0 
+        columns = ['left', 'right', 'neutral', 'model1_up', 'model1_down', 'model2_up', 'model2_down']
+        for col in columns:
+            if col not in self.df.columns:
+                self.df[col] = 0
         self.save_votes()
     
     def save_votes(self):
@@ -17,6 +18,10 @@ class DataProcessor:
             'left': self.df['left'],
             'right': self.df['right'],
             'neutral': self.df['neutral'],
+            'model1_up': self.df['model1_up'],
+            'model1_down': self.df['model1_down'],
+            'model2_up': self.df['model2_up'],
+            'model2_down': self.df['model2_down'],
         })
         votes_df.to_csv(f'votes_result_{self.port}.csv', index=False)
     
@@ -206,5 +211,9 @@ class DataProcessor:
 - A 선택: {left_votes}건 ({(left_votes/total_votes*100):.1f}%)
 - B 선택: {right_votes}건 ({(right_votes/total_votes*100):.1f}%)
 - 중립: {neutral_votes}건 ({(neutral_votes/total_votes*100):.1f}%)
+
+### 툴 평가 결과
+- 모델 A: 👍 {self.df['model1_up'].sum()}건, 👎 {self.df['model1_down'].sum()}건
+- 모델 B: 👍 {self.df['model2_up'].sum()}건, 👎 {self.df['model2_down'].sum()}건
         """
         return stats

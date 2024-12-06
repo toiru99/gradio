@@ -43,16 +43,12 @@ class EventHandler:
             self.data_processor.df.at[page_index, 'neutral'] += 1
 
         self.data_processor.save_votes()
-        next_page = min(page_index + 1, len(self.data_processor.df) - 1)
         
-        if (next_page == len(self.data_processor.df) - 1 and 
-            (self.data_processor.df.at[page_index, 'left'] > 0 or 
-            self.data_processor.df.at[page_index, 'right'] > 0 or
-            self.data_processor.df.at[page_index, 'neutral'] > 0)):
-            stats = self.data_processor.calculate_statistics()
-            return self.update_page(next_page) + (next_page,) + (stats,) + (True,)
+        # 현재 페이지에 머무르도록 next_page를 현재 page_index로 설정
+        next_page = page_index
         
-        return self.update_page(next_page) + (next_page,) + ("",) + (True,)
+        stats = self.data_processor.calculate_statistics()
+        return self.update_page(next_page) + (next_page,) + (stats,) + (True,)
 
     def cancel_selection(self, page_index, slider):
         self.data_processor.df.at[page_index, 'left'] = max(0, self.data_processor.df.at[page_index, 'left'] - 1)
@@ -60,8 +56,46 @@ class EventHandler:
         self.data_processor.df.at[page_index, 'neutral'] = max(0, self.data_processor.df.at[page_index, 'neutral'] - 1)
         self.data_processor.save_votes()
         
-        return self.update_page(page_index) + (page_index,) + ("",) + (True,)
+        # 툴 평가도 초기화
+        self.data_processor.df.at[page_index, 'model1_up'] = 0
+        self.data_processor.df.at[page_index, 'model1_down'] = 0
+        self.data_processor.df.at[page_index, 'model2_up'] = 0
+        self.data_processor.df.at[page_index, 'model2_down'] = 0
+        self.data_processor.save_votes()
+        
+        # 통계 업데이트
+        stats = self.data_processor.calculate_statistics()
+        
+        return self.update_page(page_index) + (page_index,) + (stats,) + (True,)
 
     def move_page(self, page_index, direction):
         new_page = max(0, min(len(self.data_processor.df) - 1, page_index + direction))
         return self.update_page(new_page) + (new_page,)
+
+    def update_tool_vote(self, page_index, model_num, vote_type):
+        # 이전 선택 초기화
+        opposite_vote = "down" if vote_type == "up" else "up"
+        self.data_processor.df.at[page_index, f'model{model_num}_{opposite_vote}'] = 0
+        
+        # 새로운 선택 기록
+        column_name = f'model{model_num}_{vote_type}'
+        self.data_processor.df.at[page_index, column_name] = 1
+        self.data_processor.save_votes()
+        
+        # 통계 업데이트
+        stats = self.data_processor.calculate_statistics()
+        
+        # 버튼 상태 업데이트
+        button_states = []
+        for m in [1, 2]:
+            for v in ["up", "down"]:
+                if m == model_num and v == vote_type:
+                    text = f"모델 {'A' if m==1 else 'B'} 툴 {'good' if v=='up' else 'bad'} (선택됨)"
+                    interactive = False
+                else:
+                    text = f"모델 {'A' if m==1 else 'B'} 툴 {'good' if v=='up' else 'bad'}"
+                    interactive = True
+                button_states.append(gr.Button(value=text, interactive=interactive))
+        
+        button_states.append(stats)
+        return tuple(button_states)
