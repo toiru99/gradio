@@ -1,34 +1,76 @@
 import json
 import ast
 import pandas as pd
+import random
 
 class DataProcessor:
-    def __init__(self, csv_path, port):
+    def __init__(self, csv_path, session=1):
         self.csv_path = csv_path
-        self.port = port
+        self.session = session
         self.df = pd.read_csv(csv_path)
-        self.df['left'] = 0
-        self.df['right'] = 0
-        self.df['neutral'] = 0 
+        
+        # 세션별 매핑 파일 경로
+        self.mapping_file = f'session_{session}_mapping.json'
+        
+        # 각 페이지별 매핑 생성 또는 로드
+        self.page_mappings = self.load_or_create_page_mappings()
+        
+        # 기존 열 초기화...
+        if 'best_model' not in self.df.columns:
+            self.df['best_model'] = ''
+        if 'worst_model' not in self.df.columns:
+            self.df['worst_model'] = ''
+        
+        # 모델별 투표 열 초기화 (A, B, C 기준)
+        for model in ['A', 'B', 'C']:
+            if f'model{model}_up' not in self.df.columns:
+                self.df[f'model{model}_up'] = 0
+            if f'model{model}_down' not in self.df.columns:
+                self.df[f'model{model}_down'] = 0
+        
         self.save_votes()
     
-    def save_votes(self):
-        votes_df = pd.DataFrame({
-            'left': self.df['left'],
-            'right': self.df['right'],
-            'neutral': self.df['neutral'],
-        })
-        votes_df.to_csv(f'votes_result_{self.port}.csv', index=False)
-    
-    def read_data(self, file_path):
+    def load_or_create_page_mappings(self):
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                data = file.read()
-            data_dict = ast.literal_eval(data)
-            return data_dict.get('memory', {}).get('messages', [])
-        except (ValueError, SyntaxError) as e:
-            print(f"Python 객체 변환 오류: {e}")
-            return []
+            # 기존 매핑 파일이 있으면 로드
+            with open(self.mapping_file, 'r') as f:
+                mappings = json.load(f)
+                # 새로운 페이지가 추가된 경우 처리
+                if len(mappings) < len(self.df):
+                    for i in range(len(mappings), len(self.df)):
+                        mappings[str(i)] = self.generate_random_mapping()
+                    with open(self.mapping_file, 'w') as f:
+                        json.dump(mappings, f)
+                return mappings
+        except FileNotFoundError:
+            # 없으면 모든 페이지에 대해 새로 생성
+            mappings = {str(i): self.generate_random_mapping() for i in range(len(self.df))}
+            with open(self.mapping_file, 'w') as f:
+                json.dump(mappings, f)
+            return mappings
+    
+    def generate_random_mapping(self):
+        models = ['A', 'B', 'C']
+        random.shuffle(models)
+        return {i+1: model for i, model in enumerate(models)}
+    
+    def get_mapping_for_page(self, page_index):
+        return self.page_mappings[str(page_index)]
+    
+    def save_votes(self):
+        # 각 페이지의 매핑 정보 저장
+        votes_df = pd.DataFrame({
+            'best_model': self.df['best_model'],
+            'worst_model': self.df['worst_model'],
+            'model_mapping': [str(self.page_mappings[str(i)]) for i in range(len(self.df))],
+            'modelA_up': self.df['modelA_up'],
+            'modelA_down': self.df['modelA_down'],
+            'modelB_up': self.df['modelB_up'],
+            'modelB_down': self.df['modelB_down'],
+            'modelC_up': self.df['modelC_up'],
+            'modelC_down': self.df['modelC_down'],
+        })
+        votes_df.to_csv(f'votes_result_{self.session}.csv', index=False)
     
     def parse_messages(self, data):
         parsed_conversations = []
@@ -191,20 +233,39 @@ class DataProcessor:
             print(f"Error in display_conversations: {e}")
             return []
 
-
     def calculate_statistics(self):
-        total_votes = len(self.df)
-        left_votes = self.df['left'].sum()
-        right_votes = self.df['right'].sum()
-        neutral_votes = self.df['neutral'].sum()
+        total_votes = len(self.df[self.df['best_model'] != ''])
+        if total_votes == 0:
+            return "아직 투표 결과가 없습니다."
         
-        self.save_votes()
+        # 베스트 모델 통계
+        best_counts = self.df['best_model'].value_counts()
+        best_stats = "\n### 베스트 모델 투표 결과\n"
+        for model in ['A', 'B', 'C', 'N']:
+            count = best_counts.get(model, 0)
+            percentage = (count/total_votes*100) if total_votes > 0 else 0
+            model_name = "중립" if model == 'N' else f"모델 {model}"
+            best_stats += f"- {model_name}: {count}건 ({percentage:.1f}%)\n"
         
-        stats = f"""
-### 투표 결과
-- 총 투표 수: {total_votes}건
-- A 선택: {left_votes}건 ({(left_votes/total_votes*100):.1f}%)
-- B 선택: {right_votes}건 ({(right_votes/total_votes*100):.1f}%)
-- 중립: {neutral_votes}건 ({(neutral_votes/total_votes*100):.1f}%)
-        """
-        return stats
+        # 워스트 모델 통계
+        worst_counts = self.df['worst_model'].value_counts()
+        worst_stats = "\n### 워스트 모델 투표 결과\n"
+        for model in ['A', 'B', 'C', 'N']:
+            count = worst_counts.get(model, 0)
+            percentage = (count/total_votes*100) if total_votes > 0 else 0
+            model_name = "중립" if model == 'N' else f"모델 {model}"
+            worst_stats += f"- {model_name}: {count}건 ({percentage:.1f}%)\n"
+        
+        # 툴 평가 통계 추가
+        tool_stats = "\n### 툴 평가 결과\n"
+        for model in ['A', 'B', 'C']:
+            up_votes = self.df[f'model{model}_up'].sum()
+            down_votes = self.df[f'model{model}_down'].sum()
+            tool_stats += f"- 모델 {model}: 👍 {up_votes}건, 👎 {down_votes}건\n"
+        
+        return best_stats + worst_stats + tool_stats
+    
+    def get_displayed_model_name(self, actual_model):
+        # 실제 모델 이름을 표시용 이름으로 변환
+        reverse_mapping = {v: k for k, v in self.page_mappings[str(actual_model)].items()}
+        return f"모델 {reverse_mapping[actual_model]}"

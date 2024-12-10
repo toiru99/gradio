@@ -8,83 +8,52 @@ class UIManager:
         <style>
         .container { 
             margin: 15px; 
-            padding-bottom: 160px;
-            position: relative;
-        }
-        .title { 
-            text-align: center; 
-            margin-bottom: 20px; 
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         .chatbot { 
-            height: auto !important;  /* 높이를 자동으로 설정 */
-            overflow-y: visible !important;  /* 스크롤바를 숨김 */
-            margin-bottom: 160px !important;
+            flex: 1; /* 부모 요소의 남은 공간을 모두 차지하도록 설정 */
+            overflow-y: auto !important;
         }
-        .chatbot > div {
-            height: auto !important;
-            overflow-y: visible !important;
-        }
-        .chatbot > div > div {
-            overflow-y: visible !important;
-            max-height: none !important;
-        }
-        .footer { 
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+        .bottom-controls {
             background-color: white;
-            padding: 0px;
+            padding: 15px;
             border-top: 1px solid #ddd;
-            z-index: 1000;
-            margin: 0;
+            margin-top: 20px;
         }
         .page-controls { 
             display: flex; 
             justify-content: center; 
             align-items: center; 
             gap: 10px;
-            margin-bottom: 5px;
-        }
-        .page-controls button {
-            min-width: 40px !important;
-            height: 40px !important;
-            padding: 0 !important;
-        }
-        .choice-buttons {
-            position: fixed;
-            bottom: 70px;  
-            left: 0;
-            right: 0;
-            background-color: white;
-            padding: 15px;
-            z-index: 1000;
-            margin: 0;
-            border-top: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-        .model-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            width: 100%;
-        }
-        .model-buttons button,
-        .neutral-button,
-        .cancel-button {
-            width: 150px !important;
-            height: 45px !important;
-            margin: 0 !important;
+            margin: 15px 0;
         }
         .statistics { 
-            margin-top: 10px; 
+            margin-bottom: 15px; 
             padding: 10px; 
             background-color: #e9ecef; 
             border-radius: 8px; 
-            font-size: 0.9em; 
+        }
+        .bottom-controls button {
+            background-color: #FF5722; /* 더 진한 주황색으로 변경 */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .bottom-controls button:hover {
+            background-color: #E64A19; /* 더 진한 주황색의 어두운 색상으로 변경 */
+        }
+        .bottom-controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .bottom-controls button.selected {
+            background-color: #4caf50; /* 선택된 버튼의 색상 (녹색) */
         }
         </style>
         """
@@ -100,96 +69,242 @@ class UIManager:
         
     def create_interface(self):
         with gr.Blocks(css=self.css, js=self.js) as iface:
-            with gr.Column(elem_classes="container"):
-                gr.Markdown("## 대화 비교 평가", elem_classes="title")
-                
-                with gr.Column(elem_classes="statistics"):
-                    statistics = gr.Markdown("")
-                
+            with gr.Column(elem_classes="container"):  
+                # 상단: 세션 선택
                 with gr.Row():
-                    outputs1 = gr.Chatbot(label="모델 A의 응답", elem_classes="chatbot")
-                    outputs2 = gr.Chatbot(label="모델 B의 응답", elem_classes="chatbot")
+                    session_dropdown = gr.Dropdown(
+                        choices=["세션 1", "세션 2", "세션 3", "세션 4"],
+                        value="세션 1",
+                        label="세션 선택"
+                    )
+                                                                
+                # 중단: 대화창 - 동적 라벨 적용
+                with gr.Row():
+                    with gr.Column(elem_classes="chatbot"):
+                        outputs1 = gr.Chatbot(label="모델 1의 응답", elem_classes="chatbot")
+                    with gr.Column(elem_classes="chatbot"):
+                        outputs2 = gr.Chatbot(label="모델 2의 응답", elem_classes="chatbot")
+                    with gr.Column(elem_classes="chatbot"):
+                        outputs3 = gr.Chatbot(label="모델 3의 응답", elem_classes="chatbot")
                 
-                with gr.Column(elem_classes="choice-buttons"):
-                    with gr.Row(elem_classes="model-buttons"):
-                        left_button = gr.Button("모델 A의 응답", variant="primary", scale=1, elem_id="left_btn")
-                        neutral_button = gr.Button("중립", variant="primary", scale=1, elem_id="neutral_btn")
-                        right_button = gr.Button("모델 B의 응답", variant="primary", scale=1, elem_id="right_btn")
-                    cancel_button = gr.Button("선택 취소", variant="primary", scale=1)
-                
-                with gr.Column(elem_classes="footer"):
-                    with gr.Row(elem_classes="page-controls"):
-                        prev_button = gr.Button("◀", scale=1)
-                        current_page = gr.Markdown("현재 페이지: 1 / " + str(len(self.data_processor.df)))
-                        next_button = gr.Button("▶", scale=1)
-                        # 슬라이더를 같은 행에 배치
+                # 하단: 선택 버튼들
+                with gr.Column(elem_classes="bottom-controls"):
+                    with gr.Column():
+                        gr.Markdown("### 툴 평가")
+                        with gr.Row():
+                            button_1_up = gr.Button("모델 1 툴 good")
+                            button_1_down = gr.Button("모델 1 툴 bad")
+                            button_2_up = gr.Button("모델 2 툴 good")
+                            button_2_down = gr.Button("모델 2 툴 bad")
+                            button_3_up = gr.Button("모델 3 툴 good")
+                            button_3_down = gr.Button("모델 3 툴 bad")
+                        
+                        gr.Markdown("### 가장 좋은 대답한 모델")
+                        with gr.Row():
+                            best_1 = gr.Button("모델 1")
+                            best_2 = gr.Button("모델 2")
+                            best_3 = gr.Button("모델 3")
+                        
+                        gr.Markdown("### 가장 나쁜 대답한 모델")
+                        with gr.Row():
+                            worst_1 = gr.Button("모델 1")
+                            worst_2 = gr.Button("모델 2")
+                            worst_3 = gr.Button("모델 3")
+                        
+                        gr.Markdown("### 모델들이 비슷할 경우")
+                        with gr.Row():
+                            neutral_button = gr.Button("중립 (모델들이 비슷)")
+                        
+                        cancel_button = gr.Button("선택 취소")
+                    
+                    with gr.Column():
+                        with gr.Row(elem_classes="page-controls"):
+                            prev_button = gr.Button("◀", scale=1)
+                            current_page = gr.Markdown("현재 페이지: 1 / " + str(len(self.data_processor.df)))
+                            next_button = gr.Button("▶", scale=1)
+                            
                         slider = gr.Slider(
-                            minimum=0,
-                            maximum=len(self.data_processor.df)-1,
+                            minimum=1,
+                            maximum=len(self.data_processor.df),
                             step=1,
-                            value=0,
+                            value=1,
                             label="페이지 선택",
                             visible=True
                         )
                         page_index = gr.State(0)
-            
-            # 초기 페이지 로드
-            initial_outputs1, initial_outputs2, initial_page = self.event_handler.load_initial_page()
-            outputs1.value = initial_outputs1
-            outputs2.value = initial_outputs2
-            current_page.value = initial_page
-            
-            # 이벤트 핸들러 연결
-            slider.change(
-                fn=self.event_handler.update_page,
-                inputs=[slider],
-                outputs=[outputs1, outputs2, page_index, current_page, 
-                        left_button, right_button, neutral_button, cancel_button]
-            )
-            
-            left_button.click(
-                fn=self.event_handler.update_selection,
-                inputs=[page_index, gr.State("left"), slider],
-                outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics],
-                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
-            )
 
-            right_button.click(
-                fn=self.event_handler.update_selection,
-                inputs=[page_index, gr.State("right"), slider],
-                outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics],
-                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
-            )
+                # 상단: 통계
+                with gr.Column(elem_classes="statistics"):
+                    statistics = gr.Markdown("")
 
-            neutral_button.click(
-                fn=self.event_handler.update_selection,
-                inputs=[page_index, gr.State("neutral"), slider],
-                outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics],
-                js="async () => { window.scrollTo({top: 0, behavior: 'auto'}); }"
-            )
+                # 초기 페이지 로드
+                initial_outputs1, initial_outputs2, initial_outputs3, initial_page = self.event_handler.load_initial_page()
+                outputs1.value = initial_outputs1
+                outputs2.value = initial_outputs2
+                outputs3.value = initial_outputs3
+                current_page.value = initial_page
                 
-            cancel_button.click(
-                fn=self.event_handler.cancel_selection,
-                inputs=[page_index, slider],
-                outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider, statistics]
-            )
-            
-            prev_button.click(
-                fn=self.event_handler.move_page,
-                inputs=[page_index, gr.State(-1)],
-                outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider]
-            )
-            
-            next_button.click(
-                fn=self.event_handler.move_page,
-                inputs=[page_index, gr.State(1)],
-                outputs=[outputs1, outputs2, page_index, current_page,
-                        left_button, right_button, neutral_button, cancel_button, slider]
-            )
+                # 이벤트 핸들러 연결
+                slider.change(
+                    fn=self.event_handler.update_page,
+                    inputs=[slider],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page, 
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down]
+                )
+                
+                best_1.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("1"), gr.State("best")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                best_2.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("2"), gr.State("best")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                best_3.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("3"), gr.State("best")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                worst_1.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("1"), gr.State("worst")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                worst_2.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("2"), gr.State("worst")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                worst_3.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("3"), gr.State("worst")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                neutral_button.click(
+                    fn=self.event_handler.update_model_vote,
+                    inputs=[page_index, gr.State("N"), gr.State("neutral")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                cancel_button.click(
+                    fn=self.event_handler.cancel_selection,
+                    inputs=[page_index, slider],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                prev_button.click(
+                    fn=self.event_handler.move_page,
+                    inputs=[page_index, gr.State(-1)],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page, 
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down, slider]
+                )
+                
+
+                next_button.click(
+                    fn=self.event_handler.move_page,
+                    inputs=[page_index, gr.State(1)],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page, 
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down, slider]
+                )
+
+                # 툴 평가 버튼 이벤트 연결
+                button_1_up.click(
+                    fn=self.event_handler.update_tool_vote,
+                    inputs=[page_index, gr.State(1), gr.State("up")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                button_1_down.click(
+                    fn=self.event_handler.update_tool_vote,
+                    inputs=[page_index, gr.State(1), gr.State("down")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                button_2_up.click(
+                    fn=self.event_handler.update_tool_vote,
+                    inputs=[page_index, gr.State(2), gr.State("up")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                button_2_down.click(
+                    fn=self.event_handler.update_tool_vote,
+                    inputs=[page_index, gr.State(2), gr.State("down")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                button_3_up.click(
+                    fn=self.event_handler.update_tool_vote,
+                    inputs=[page_index, gr.State(3), gr.State("up")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                button_3_down.click(
+                    fn=self.event_handler.update_tool_vote,
+                    inputs=[page_index, gr.State(3), gr.State("down")],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
+                
+                # 세션 변경 이벤트 핸들러 연결
+                session_dropdown.change(
+                    fn=self.event_handler.change_session,
+                    inputs=[session_dropdown],
+                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
+                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                            slider, statistics]
+                )
 
         return iface
