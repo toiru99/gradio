@@ -84,8 +84,6 @@ class UIManager:
                         outputs1 = gr.Chatbot(label="모델 1의 응답", elem_classes="chatbot")
                     with gr.Column(elem_classes="chatbot"):
                         outputs2 = gr.Chatbot(label="모델 2의 응답", elem_classes="chatbot")
-                    with gr.Column(elem_classes="chatbot"):
-                        outputs3 = gr.Chatbot(label="모델 3의 응답", elem_classes="chatbot")
                 
                 # 하단: 선택 버튼들
                 with gr.Column(elem_classes="bottom-controls"):
@@ -96,20 +94,16 @@ class UIManager:
                             button_1_down = gr.Button("모델 1 툴 bad")
                             button_2_up = gr.Button("모델 2 툴 good")
                             button_2_down = gr.Button("모델 2 툴 bad")
-                            button_3_up = gr.Button("모델 3 툴 good")
-                            button_3_down = gr.Button("모델 3 툴 bad")
                         
                         gr.Markdown("### 가장 좋은 대답한 모델")
                         with gr.Row():
                             best_1 = gr.Button("모델 1")
                             best_2 = gr.Button("모델 2")
-                            best_3 = gr.Button("모델 3")
                         
-                        gr.Markdown("### 가장 나쁜 대답한 모델")
-                        with gr.Row():
-                            worst_1 = gr.Button("모델 1")
-                            worst_2 = gr.Button("모델 2")
-                            worst_3 = gr.Button("모델 3")
+                        # gr.Markdown("### 가장 나쁜 대답한 모델")
+                        # with gr.Row():
+                        #     worst_1 = gr.Button("모델 1")
+                        #     worst_2 = gr.Button("모델 2")
                         
                         gr.Markdown("### 모델들이 비슷할 경우")
                         with gr.Row():
@@ -138,162 +132,108 @@ class UIManager:
                     statistics = gr.Markdown("")
 
                 # 초기 페이지 로드
-                initial_outputs1, initial_outputs2, initial_outputs3, initial_page = self.event_handler.load_initial_page()
+                initial_outputs1, initial_outputs2, initial_page = self.event_handler.load_initial_page()
                 outputs1.value = initial_outputs1
                 outputs2.value = initial_outputs2
-                outputs3.value = initial_outputs3
                 current_page.value = initial_page
                 
                 # 이벤트 핸들러 연결
                 slider.change(
                     fn=self.event_handler.update_page,
                     inputs=[slider],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page, 
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down]
+                    outputs=[outputs1, outputs2, page_index, current_page, 
+                            best_1, best_2,cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down]
                 )
                 
                 best_1.click(
                     fn=self.event_handler.update_model_vote,
                     inputs=[page_index, gr.State("1"), gr.State("best")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, 
                             slider, statistics]
                 )
                 
                 best_2.click(
                     fn=self.event_handler.update_model_vote,
                     inputs=[page_index, gr.State("2"), gr.State("best")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, 
                             slider, statistics]
                 )
                 
-                best_3.click(
-                    fn=self.event_handler.update_model_vote,
-                    inputs=[page_index, gr.State("3"), gr.State("best")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
-                            slider, statistics]
-                )
-                
-                worst_1.click(
-                    fn=self.event_handler.update_model_vote,
-                    inputs=[page_index, gr.State("1"), gr.State("worst")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
-                            slider, statistics]
-                )
-                
-                worst_2.click(
-                    fn=self.event_handler.update_model_vote,
-                    inputs=[page_index, gr.State("2"), gr.State("worst")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
-                            slider, statistics]
-                )
-                
-                worst_3.click(
-                    fn=self.event_handler.update_model_vote,
-                    inputs=[page_index, gr.State("3"), gr.State("worst")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
-                            slider, statistics]
-                )
                 
                 neutral_button.click(
                     fn=self.event_handler.update_model_vote,
                     inputs=[page_index, gr.State("N"), gr.State("neutral")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, 
                             slider, statistics]
                 )
                 
                 cancel_button.click(
                     fn=self.event_handler.cancel_selection,
                     inputs=[page_index, slider],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, 
                             slider, statistics]
                 )
                 
                 prev_button.click(
                     fn=self.event_handler.move_page,
                     inputs=[page_index, gr.State(-1)],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page, 
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down, slider]
+                    outputs=[outputs1, outputs2, page_index, current_page, 
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, slider]
                 )
                 
 
                 next_button.click(
                     fn=self.event_handler.move_page,
                     inputs=[page_index, gr.State(1)],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page, 
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down, slider]
+                    outputs=[outputs1, outputs2, page_index, current_page, 
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, slider]
                 )
 
                 # 툴 평가 버튼 이벤트 연결
                 button_1_up.click(
                     fn=self.event_handler.update_tool_vote,
                     inputs=[page_index, gr.State(1), gr.State("up")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down,
                             slider, statistics]
                 )
                 
                 button_1_down.click(
                     fn=self.event_handler.update_tool_vote,
                     inputs=[page_index, gr.State(1), gr.State("down")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down,
                             slider, statistics]
                 )
                 
                 button_2_up.click(
                     fn=self.event_handler.update_tool_vote,
                     inputs=[page_index, gr.State(2), gr.State("up")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down,
                             slider, statistics]
                 )
                 
                 button_2_down.click(
                     fn=self.event_handler.update_tool_vote,
                     inputs=[page_index, gr.State(2), gr.State("down")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
-                            slider, statistics]
-                )
-                
-                button_3_up.click(
-                    fn=self.event_handler.update_tool_vote,
-                    inputs=[page_index, gr.State(3), gr.State("up")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
-                            slider, statistics]
-                )
-                
-                button_3_down.click(
-                    fn=self.event_handler.update_tool_vote,
-                    inputs=[page_index, gr.State(3), gr.State("down")],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down,
                             slider, statistics]
                 )
                 
@@ -301,9 +241,9 @@ class UIManager:
                 session_dropdown.change(
                     fn=self.event_handler.change_session,
                     inputs=[session_dropdown],
-                    outputs=[outputs1, outputs2, outputs3, page_index, current_page,
-                            best_1, best_2, best_3, worst_1, worst_2, worst_3, cancel_button,
-                            button_1_up, button_1_down, button_2_up, button_2_down, button_3_up, button_3_down,
+                    outputs=[outputs1, outputs2, page_index, current_page,
+                            best_1, best_2, cancel_button,
+                            button_1_up, button_1_down, button_2_up, button_2_down, 
                             slider, statistics]
                 )
 

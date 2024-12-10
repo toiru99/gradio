@@ -22,7 +22,7 @@ class DataProcessor:
             self.df['worst_model'] = ''
         
         # 모델별 투표 열 초기화 (A, B, C 기준)
-        for model in ['A', 'B', 'C']:
+        for model in ['A', 'B']:
             if f'model{model}_up' not in self.df.columns:
                 self.df[f'model{model}_up'] = 0
             if f'model{model}_down' not in self.df.columns:
@@ -50,7 +50,7 @@ class DataProcessor:
             return mappings
     
     def generate_random_mapping(self):
-        models = ['A', 'B', 'C']
+        models = ['A', 'B']
         random.shuffle(models)
         return {i+1: model for i, model in enumerate(models)}
     
@@ -67,8 +67,6 @@ class DataProcessor:
             'modelA_down': self.df['modelA_down'],
             'modelB_up': self.df['modelB_up'],
             'modelB_down': self.df['modelB_down'],
-            'modelC_up': self.df['modelC_up'],
-            'modelC_down': self.df['modelC_down'],
         })
         votes_df.to_csv(f'votes_result_{self.session}.csv', index=False)
     
@@ -238,32 +236,23 @@ class DataProcessor:
         if total_votes == 0:
             return "아직 투표 결과가 없습니다."
         
-        # 베스트 모델 통계
+        # 베스트 모델 통계만 계산
         best_counts = self.df['best_model'].value_counts()
         best_stats = "\n### 베스트 모델 투표 결과\n"
-        for model in ['A', 'B', 'C', 'N']:
+        for model in ['A', 'B', 'N']:
             count = best_counts.get(model, 0)
             percentage = (count/total_votes*100) if total_votes > 0 else 0
             model_name = "중립" if model == 'N' else f"모델 {model}"
             best_stats += f"- {model_name}: {count}건 ({percentage:.1f}%)\n"
         
-        # 워스트 모델 통계
-        worst_counts = self.df['worst_model'].value_counts()
-        worst_stats = "\n### 워스트 모델 투표 결과\n"
-        for model in ['A', 'B', 'C', 'N']:
-            count = worst_counts.get(model, 0)
-            percentage = (count/total_votes*100) if total_votes > 0 else 0
-            model_name = "중립" if model == 'N' else f"모델 {model}"
-            worst_stats += f"- {model_name}: {count}건 ({percentage:.1f}%)\n"
-        
-        # 툴 평가 통계 추가
+        # 툴 평가 통계
         tool_stats = "\n### 툴 평가 결과\n"
-        for model in ['A', 'B', 'C']:
+        for model in ['A', 'B']:
             up_votes = self.df[f'model{model}_up'].sum()
             down_votes = self.df[f'model{model}_down'].sum()
             tool_stats += f"- 모델 {model}: 👍 {up_votes}건, 👎 {down_votes}건\n"
         
-        return best_stats + worst_stats + tool_stats
+        return best_stats + tool_stats
     
     def get_displayed_model_name(self, actual_model):
         # 실제 모델 이름을 표시용 이름으로 변환

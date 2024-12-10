@@ -13,21 +13,21 @@ class EventHandler:
         file_contents = []
         display_methods = []  # 각 모델별 display 메소드 저장
         
-        for i in range(1, 4):
-            model = mapping[str(i)]  # 키를 문자열로 변환
+        # 1과 2에 대해서만 반복 (모델 2개)
+        for i in ['1', '2']:  # 문자열로 직접 지정
+            model = mapping[i]  # 이미 문자열이므로 변환 불필요
             file_contents.append(self.data_processor.df[f'data{ord(model)-64}'][0])
-            # A 모델은 display_conversations, B,C 모델은 display_conversations_refactored 사용
+            # A 모델은 display_conversations, B 모델은 display_conversations_refactored 사용
             display_methods.append(
                 self.data_processor.display_conversations if model == 'A' 
                 else self.data_processor.display_conversations_refactored
             )
-            
+        
         current_page = f"현재 페이지: 1 / {len(self.data_processor.df)}"
         
         return (
             display_methods[0](file_contents[0]),
             display_methods[1](file_contents[1]),
-            display_methods[2](file_contents[2]),
             current_page
         )
 
@@ -39,8 +39,9 @@ class EventHandler:
         file_contents = []
         display_methods = []
         
-        for i in range(1, 4):
-            model = mapping[str(i)]
+        # 1과 2에 대해서만 반복 (모델 2개)
+        for i in ['1', '2']:
+            model = mapping[i]
             file_contents.append(self.data_processor.df[f'data{ord(model)-64}'][page_index])
             display_methods.append(
                 self.data_processor.display_conversations if model == 'A' 
@@ -49,35 +50,25 @@ class EventHandler:
         
         current_page = f"현재 페이지: {page_index + 1} / {len(self.data_processor.df)}"
         
-        # 현재 페이지의 best/worst 모델 가져오기
+        # 현재 페이지의 best 모델만 가져오기
         best_model = self.data_processor.df.at[page_index, 'best_model']
-        worst_model = self.data_processor.df.at[page_index, 'worst_model']
         
-        # 중립 상태 확인
-        is_neutral = best_model == 'N' and worst_model == 'N'
+        # 중립 상태 확인 (worst 모델 제거)
+        is_neutral = best_model == 'N'
         
-        # 각 버튼의 상태 설정
+        # 각 버튼의 상태 설정 (best 모델만)
         button_states = []
-        for i in range(1, 4):
-            model = mapping[str(i)]
-            # Best 모델 버튼 상태
+        for i in ['1', '2']:
+            model = mapping[i]
             if best_model == model:
-                button_states.append(gr.Button(value=f"모델 {i} (선택됨)", interactive=not is_neutral))
-            else:
-                button_states.append(gr.Button(value=f"모델 {i}", interactive=not is_neutral))
-                
-        # Worst 모델 버튼 상태
-        for i in range(1, 4):
-            model = mapping[str(i)]
-            if worst_model == model:
                 button_states.append(gr.Button(value=f"모델 {i} (선택됨)", interactive=not is_neutral))
             else:
                 button_states.append(gr.Button(value=f"모델 {i}", interactive=not is_neutral))
         
         # 툴 평가 버튼 상태
         tool_button_states = []
-        for i in range(1, 4):
-            model = mapping[str(i)]  # 현재 표시 위치의 실제 모델(A,B,C)
+        for i in ['1', '2']:
+            model = mapping[i]
             up_state = "👍 완료" if self.data_processor.df.at[page_index, f'model{model}_up'] > 0 else f"모델 {i} 툴 good"
             down_state = "👎 완료" if self.data_processor.df.at[page_index, f'model{model}_down'] > 0 else f"모델 {i} 툴 bad"
             tool_button_states.extend([up_state, down_state])
@@ -85,21 +76,19 @@ class EventHandler:
         return [
             display_methods[0](file_contents[0]),
             display_methods[1](file_contents[1]),
-            display_methods[2](file_contents[2]),
             page_index,
             current_page,
-            *button_states,  # best/worst 모델 버튼들
+            *button_states,  # best 모델 버튼들만
             gr.Button(value="선택 취소", interactive=True),
-            *[gr.Button(value=state) for state in tool_button_states]  # 툴 평가 버튼들
+            *[gr.Button(value=state) for state in tool_button_states]
         ]
 
     def cancel_selection(self, page_index, slider):
-        # 모델 선택 초기화
+        # best 모델만 초기화
         self.data_processor.df.at[page_index, 'best_model'] = ''
-        self.data_processor.df.at[page_index, 'worst_model'] = ''
         
-        # 툴 평가 상태 초기화 (A,B,C 기준으로 변경)
-        for model in ['A', 'B', 'C']:
+        # 툴 평가 상태 초기화
+        for model in ['A', 'B']:
             self.data_processor.df.at[page_index, f'model{model}_up'] = 0
             self.data_processor.df.at[page_index, f'model{model}_down'] = 0
         
@@ -137,24 +126,16 @@ class EventHandler:
         # 중립 선택 시
         if model_num == 'N':
             self.data_processor.df.at[page_index, 'best_model'] = 'N'
-            self.data_processor.df.at[page_index, 'worst_model'] = 'N'
             self.data_processor.save_votes()
             stats = self.data_processor.calculate_statistics()
             return self.update_page(page_index) + [page_index, str(stats)]
         
-        # 일반 모델 선택 시 (기존 코드)
+        # 일반 모델 선택 시
         mapping = self.data_processor.get_mapping_for_page(page_index)
         actual_model = mapping[str(model_num)]
         
-        column_name = f'{vote_type}_model'
-        self.data_processor.df.at[page_index, column_name] = actual_model
-        
-        if vote_type == 'best':
-            if self.data_processor.df.at[page_index, 'worst_model'] == actual_model:
-                self.data_processor.df.at[page_index, 'worst_model'] = ''
-        elif vote_type == 'worst':
-            if self.data_processor.df.at[page_index, 'best_model'] == actual_model:
-                self.data_processor.df.at[page_index, 'best_model'] = ''
+        # best 모델만 업데이트
+        self.data_processor.df.at[page_index, 'best_model'] = actual_model
         
         self.data_processor.save_votes()
         stats = self.data_processor.calculate_statistics()
@@ -176,8 +157,6 @@ class EventHandler:
             self.data_processor.df['model1_down'] = previous_votes['model1_down']
             self.data_processor.df['model2_up'] = previous_votes['model2_up']
             self.data_processor.df['model2_down'] = previous_votes['model2_down']
-            self.data_processor.df['model3_up'] = previous_votes['model3_up']
-            self.data_processor.df['model3_down'] = previous_votes['model3_down']
         except FileNotFoundError:
             # 파일이 없으면 초기화
             self.data_processor.df['best_model'] = ''
@@ -186,8 +165,6 @@ class EventHandler:
             self.data_processor.df['model1_down'] = 0
             self.data_processor.df['model2_up'] = 0
             self.data_processor.df['model2_down'] = 0
-            self.data_processor.df['model3_up'] = 0
-            self.data_processor.df['model3_down'] = 0
         
         self.data_processor.save_votes()
         stats = self.data_processor.calculate_statistics()
